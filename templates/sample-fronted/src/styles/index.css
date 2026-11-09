@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  font-family: 'Vazirmatn', sans-serif;
+  color: #202821;
+  background: #f7f8f6;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --color-primary: #54715f;
+  --color-primary-dark: #3e5b49;
+  --color-ink: #202821;
+  --color-muted: #737b73;
+  --color-paper: #f7f8f6;
+  --color-sand: #f0f2ee;
+  --color-line: #e4e7e2;
+}
+
+@theme inline {
+  --font-sans: 'Vazirmatn', sans-serif;
+  --font-display: 'Vazirmatn', sans-serif;
+  --color-primary: var(--color-primary);
+  --color-ink: var(--color-ink);
+  --color-muted: var(--color-muted);
+  --color-paper: var(--color-paper);
+  --color-sand: var(--color-sand);
+  --color-line: var(--color-line);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { min-width: 320px; margin: 0; }
+[dir="rtl"] { direction: rtl; }
+[dir="rtl"] :is(h1, h2, h3) { letter-spacing: normal; }
+button, input, textarea { font: inherit; }
+::selection { color: white; background: var(--color-primary); }
+[dir="rtl"] .lucide-arrow-up-right,
+[dir="rtl"] .lucide-arrow-left { transform: scaleX(-1); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

@@ -1,0 +1,60 @@
+{
+  "name": "ai-website-builder-backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "nest build user-service && nest build project-manager && nest build ai-generation",
+    "typecheck": "tsc --noEmit",
+    "start:user-service": "nest start user-service",
+    "start:user-service:dev": "nest start user-service --watch",
+    "start:project-manager": "nest start project-manager",
+    "start:project-manager:dev": "nest start project-manager --watch",
+    "start:ai-generation": "nest start ai-generation",
+    "start:ai-generation:dev": "nest start ai-generation --watch",
+    "start:all": "concurrently -k -n users,projects,ai -c blue,green,magenta \"npm: start:user-service:dev\" \"npm: start:project-manager:dev\" \"npm: start:ai-generation:dev\"",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "test": "vitest run --config vitest.config.ts apps/user-service/src/auth/auth.service.spec.ts",
+    "test:e2e": "vitest run --config vitest.config.e2e.ts",
+    "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\""
+  },
+  "dependencies": {
+    "@nestjs/common": "^12.0.1",
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/core": "^12.0.1",
+    "@nestjs/jwt": "^11.0.0",
+    "@nestjs/microservices": "^12.0.1",
+    "@nestjs/platform-express": "^12.0.1",
+    "@nestjs/swagger": "^12.1.1",
+    "@prisma/client": "^6.19.3",
+    "amqplib": "^0.10.8",
+    "bcryptjs": "^3.0.3",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^12.0.0",
+    "@nestjs/schematics": "^12.0.0",
+    "@nestjs/testing": "^12.4.1",
+    "@types/amqplib": "^0.10.7",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.0.0",
+    "@types/supertest": "^7.2.1",
+    "concurrently": "^9.2.1",
+    "prettier": "^3.4.2",
+    "prisma": "^6.19.3",
+    "supertest": "^7.3.2",
+    "typescript": "^6.0.2",
+    "vite": "^8.3.7",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^5.1.0"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "prisma@6.19.3": true
+  }
+}

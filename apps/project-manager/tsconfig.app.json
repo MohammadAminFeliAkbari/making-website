@@ -1,0 +1,1 @@
+{ "extends": "../../tsconfig.json", "compilerOptions": { "outDir": "../../dist/apps/project-manager", "rootDir": "../.." }, "include": ["src/**/*.ts", "../../libs/**/*.ts"] }
