@@ -20,7 +20,7 @@ The UI uses the implemented endpoints: auth register/login/me; project list/crea
 
 ## Known backend limitations
 
-- No service currently exposes generated workspace files as a preview URL or serves them over HTTP. Project pages explain this and show the workspace folder instead of presenting a fake preview.
+- For local testing, preview runs the project's `npm run dev` directly on the backend host at an assigned port. The browser must be able to reach `PREVIEW_BASE_URL`.
 - Project Manager accepts a project name and generation prompt; website-type selection is not supported by its API.
 - The backend has no cookie-based JWT flow, so this frontend uses session-scoped browser storage rather than an HttpOnly cookie.
 

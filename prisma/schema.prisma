@@ -22,6 +22,22 @@ enum ProjectStatus {
   GENERATING
 }
 
+enum BuildStatus {
+  PENDING
+  INSTALLING
+  BUILDING
+  SUCCESS
+  FAILED
+}
+
+enum RuntimeStatus {
+  STOPPED
+  STARTING
+  RUNNING
+  CRASHED
+  FAILED
+}
+
 model Project {
   id        String        @id @db.Uuid
   name      String
@@ -29,6 +45,22 @@ model Project {
   status    ProjectStatus @default(CREATING)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
+  buildStatus BuildStatus @default(PENDING)
+  runtimeStatus RuntimeStatus @default(STOPPED)
+  previewPort Int? @unique
+  previewUrl String?
+  buildStartedAt DateTime?
+  buildCompletedAt DateTime?
+  lastBuildError String?
+  installStdout String?
+  installStderr String?
+  installExitCode Int?
+  buildStdout String?
+  buildStderr String?
+  buildExitCode Int?
+  runtimeProcessId Int?
+  runtimeLogs String?
+  runtimeStartedAt DateTime?
   owner     ProjectUser?
 }
 

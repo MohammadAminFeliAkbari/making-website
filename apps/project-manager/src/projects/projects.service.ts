@@ -10,9 +10,10 @@ import { PrismaService } from '../../../../libs/database/src/prisma.service';
 import { createEvent } from '../../../../libs/common/src/contracts/create-event';
 import { EventTypes } from '../../../../libs/common/src/contracts/event.contract';
 import { EventBusService } from '../../../../libs/messaging/src/rabbitmq-event-bus.service';
+import { ProjectBuildService } from './project-build.service';
 
 const execFileAsync = promisify(execFile);
-const safeProjectSelect = { id: true, name: true, folderName: true, status: true, createdAt: true, updatedAt: true } as const;
+const safeProjectSelect = { id: true, name: true, folderName: true, status: true, buildStatus: true, runtimeStatus: true, previewPort: true, previewUrl: true, buildStartedAt: true, buildCompletedAt: true, runtimeStartedAt: true, lastBuildError: true, createdAt: true, updatedAt: true } as const;
 
 @Injectable()
 export class ProjectsService {
@@ -20,6 +21,7 @@ export class ProjectsService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly events: EventBusService,
+    private readonly buildRuntime: ProjectBuildService,
   ) {}
 
   async create(userId: string, name: string) {
@@ -71,6 +73,7 @@ export class ProjectsService {
   async delete(userId: string, id: string) {
     const project = await this.prisma.project.findFirst({ where: { id, owner: { is: { userId } } }, select: safeProjectSelect });
     if (!project) throw new NotFoundException('Project not found');
+    await this.buildRuntime.stop(userId, id);
     const root = resolve(this.config.get<string>('WORKSPACES_ROOT', resolve(process.cwd(), 'workspaces')));
     const folder = resolve(root, project.folderName);
     if (!folder.startsWith(root + sep)) throw new InternalServerErrorException('Invalid project folder');

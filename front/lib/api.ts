@@ -1,5 +1,5 @@
 export type User = { id: string; email: string; createdAt: string };
-export type Project = { id: string; name: string; folderName: string; status: 'CREATING'|'READY'|'FAILED'|'GENERATING'; createdAt: string; updatedAt: string };
+export type Project = { id: string; name: string; folderName: string; status: 'CREATING'|'READY'|'FAILED'|'GENERATING'; buildStatus: 'PENDING'|'INSTALLING'|'BUILDING'|'SUCCESS'|'FAILED'; runtimeStatus: 'STOPPED'|'STARTING'|'RUNNING'|'CRASHED'|'FAILED'; previewPort: number|null; previewUrl: string|null; buildStartedAt: string|null; buildCompletedAt: string|null; runtimeStartedAt: string|null; lastBuildError: string|null; createdAt: string; updatedAt: string };
 export type Generation = { id: string; projectId: string; status: 'QUEUED'|'RUNNING'|'COMPLETED'|'FAILED'; stdout: string|null; stderr: string|null; exitCode: number|null; createdAt: string; completedAt: string|null };
 
 const tokenKey = 'forma.accessToken';
@@ -34,6 +34,12 @@ export const projectsApi = {
   create: (name: string) => api<Project>('/backend/projects', { method: 'POST', body: JSON.stringify({ name }) }),
   get: (id: string) => api<Project>(`/backend/projects/${id}`),
   generate: (id: string, prompt: string) => api<{ generationId: string; status: string }>(`/backend/projects/${id}/generations`, { method: 'POST', body: JSON.stringify({ prompt }) }),
+  build: (id: string) => api(`/backend/projects/${id}/build`, { method: 'POST' }),
+  start: (id: string) => api(`/backend/projects/${id}/start`, { method: 'POST' }),
+  stop: (id: string) => api(`/backend/projects/${id}/stop`, { method: 'POST' }),
+  restart: (id: string) => api(`/backend/projects/${id}/restart`, { method: 'POST' }),
+  preview: (id: string) => api<Project>(`/backend/projects/${id}/preview`),
+  logs: (id: string) => api<{ buildStdout:string|null; buildStderr:string|null; installStdout:string|null; installStderr:string|null; runtimeStdout:string; runtimeStderr:string; lastBuildError:string|null }>(`/backend/projects/${id}/logs`),
 };
 export const generationsApi = {
   get: (id: string) => api<Generation>(`/backend/generations/${id}`),

@@ -80,7 +80,7 @@ export class GenerationService implements OnModuleDestroy {
 
   private async finish(payload: RequestPayload, stdout: string | null, stderr: string | null, exitCode: number | null, startedAt = new Date()) {
     const completedAt = new Date();
-    const succeeded = exitCode === 0 && !stderr?.includes('GapCode process timed out');
+    const succeeded = exitCode === 0;
     const status = succeeded ? GenerationJobStatus.COMPLETED : GenerationJobStatus.FAILED;
     await this.prisma.generationJob.update({ where: { id: payload.generationId }, data: { status, stdout, stderr, exitCode, startedAt, completedAt } });
     await this.events.publish(createEvent(succeeded ? EventTypes.generationCompleted : EventTypes.generationFailed, { generationId: payload.generationId, projectId: payload.projectId, userId: payload.userId, status, exitCode, startedAt: startedAt.toISOString(), completedAt: completedAt.toISOString() }));
