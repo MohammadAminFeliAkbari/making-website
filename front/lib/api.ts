@@ -24,6 +24,24 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return response.status === 204 ? undefined as T : response.json();
 }
 
+async function downloadBlob(path: string): Promise<Blob> {
+  const headers = new Headers({ Accept: 'application/zip' });
+  const token = tokenStore.get();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  const response = await fetch(path, { headers, cache: 'no-store' });
+  if (response.status === 401) {
+    tokenStore.clear();
+    if (typeof window !== 'undefined' && !location.pathname.startsWith('/auth')) location.assign('/auth/login');
+  }
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new ApiError(Array.isArray(body?.message) ? body.message.join(', ') : body?.message || 'Could not download this project. Please try again.', response.status);
+  }
+  const blob = await response.blob();
+  if (blob.size === 0) throw new ApiError('The project archive was empty.', response.status);
+  return blob;
+}
+
 export const authApi = {
   login: (email: string, password: string) => api<{ accessToken: string; user: User }>('/backend/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   register: (email: string, password: string) => api<{ accessToken: string; user: User }>('/backend/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) }),
@@ -38,6 +56,7 @@ export const projectsApi = {
   start: (id: string) => api(`/backend/projects/${id}/start`, { method: 'POST' }),
   stop: (id: string) => api(`/backend/projects/${id}/stop`, { method: 'POST' }),
   restart: (id: string) => api(`/backend/projects/${id}/restart`, { method: 'POST' }),
+  download: (id: string) => downloadBlob(`/backend/projects/${id}/download`),
   preview: (id: string) => api<Project>(`/backend/projects/${id}/preview`),
   logs: (id: string) => api<{ buildStdout:string|null; buildStderr:string|null; installStdout:string|null; installStderr:string|null; runtimeStdout:string; runtimeStderr:string; lastBuildError:string|null }>(`/backend/projects/${id}/logs`),
 };

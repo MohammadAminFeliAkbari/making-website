@@ -1,18 +1,25 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { AuthenticatedUser } from '../../../../libs/auth/src/authenticated-user';
 import { CurrentUser } from '../../../../libs/auth/src/current-user.decorator';
 import { JwtAuthGuard } from '../../../../libs/auth/src/jwt-auth.guard';
 import { CreateProjectDto, GenerateProjectDto } from './dto/project.dto';
 import { ProjectsService } from './projects.service';
 import { ProjectBuildService } from './project-build.service';
+import { ProjectDownloadService } from './project-download.service';
+import { streamProjectArchive } from './project-archive-stream';
 
 @ApiTags('Projects')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('projects')
 export class ProjectsController {
-  constructor(private readonly projects: ProjectsService, private readonly build: ProjectBuildService) {}
+  constructor(
+    private readonly projects: ProjectsService,
+    private readonly build: ProjectBuildService,
+    private readonly downloads: ProjectDownloadService,
+  ) {}
 
   @Post() create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateProjectDto) {
     return this.projects.create(user.sub, dto.name);
@@ -28,6 +35,16 @@ export class ProjectsController {
 
   @Delete(':projectId') delete(@CurrentUser() user: AuthenticatedUser, @Param('projectId', ParseUUIDPipe) id: string) {
     return this.projects.delete(user.sub, id);
+  }
+
+  @Get(':projectId/download')
+  async download(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId', ParseUUIDPipe) id: string,
+    @Res() response: Response,
+  ) {
+    const project = await this.downloads.prepare(user.sub, id);
+    await streamProjectArchive(project, response);
   }
 
   @Post(':projectId/generations') generate(

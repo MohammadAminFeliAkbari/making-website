@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Activity, ArrowLeft, ArrowUpRight, Check, ChevronDown, Code2, ExternalLink,
+  Activity, ArrowLeft, ArrowUpRight, Check, ChevronDown, Code2, Download, ExternalLink,
   Globe2, LoaderCircle, Maximize2, MessageSquare, Monitor, RefreshCw,
   Send, Smartphone, Sparkles, Tablet, TerminalSquare, WandSparkles,
 } from 'lucide-react';
@@ -23,15 +23,17 @@ type LocalRequest = { generationId: string; prompt: string; createdAt: string };
 type Viewport = 'desktop' | 'tablet' | 'mobile';
 
 export function ProjectWorkspace({
-  project, jobs, logs, busy, onGenerate, onAction, onRefresh,
+  project, jobs, logs, busy, downloadBusy, onGenerate, onAction, onRefresh, onDownload,
 }: {
   project: Project;
   jobs: Generation[];
   logs: ProjectLogs | null;
   busy: boolean;
+  downloadBusy: boolean;
   onGenerate: (prompt: string) => Promise<string>;
   onAction: (action: 'build' | 'start' | 'stop' | 'restart') => Promise<void>;
   onRefresh: () => void;
+  onDownload: () => void;
 }) {
   const [prompt, setPrompt] = useState('');
   const [localRequests, setLocalRequests] = useState<LocalRequest[]>([]);
@@ -130,7 +132,11 @@ export function ProjectWorkspace({
         <div className="workspace-project-name"><strong>{project.name}</strong><span>Website workspace</span></div>
         <div className="workspace-project-status"><span>Project <Status status={project.status}/></span><span>Generation <Status status={generationStatus(jobs)}/></span><span>Build <Status status={project.buildStatus}/></span><span>Runtime <Status status={project.runtimeStatus}/></span></div>
         <div className="workspace-header-actions">
-          <button className="secondary compact" disabled={actionBusy || busy || buildInProgress} onClick={() => void action('build')} title="Install dependencies and run preview"><Code2 size={15}/> Build</button>
+          <button className="secondary compact workspace-download-button" disabled={downloadBusy} onClick={onDownload} title="دانلود فایل‌های سورس پروژه به‌صورت ZIP" aria-label="دانلود پروژه">
+            {downloadBusy ? <LoaderCircle className="spin" size={15}/> : <Download size={15}/>}
+            <span>دانلود پروژه</span>
+          </button>
+          <button className="secondary compact workspace-build-button" disabled={actionBusy || busy || buildInProgress} onClick={() => void action('build')} title="Install dependencies and run preview" aria-label="Build"><Code2 size={15}/> Build</button>
           {project.runtimeStatus === 'RUNNING'
             ? <button className="secondary compact" title="Stop preview" aria-label="Stop preview" disabled={actionBusy} onClick={() => void action('stop')}>Stop</button>
             : <button className="secondary compact" title="Start preview" aria-label="Start preview" disabled={actionBusy || project.buildStatus !== 'SUCCESS'} onClick={() => void action('start')}>Start</button>}

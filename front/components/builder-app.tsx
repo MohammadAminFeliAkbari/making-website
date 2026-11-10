@@ -42,6 +42,7 @@ export function BuilderApp({
   const [project, setProject] = useState<Project | null>(null);
   const [jobs, setJobs] = useState<Generation[]>([]);
   const [busy, setBusy] = useState(false);
+  const [downloadBusy, setDownloadBusy] = useState(false);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [modal, setModal] = useState(false);
@@ -201,6 +202,27 @@ export function BuilderApp({
       if (current) setProject(current);
     } finally {
       setBusy(false);
+    }
+  }
+  async function downloadProject() {
+    if (!project || downloadBusy) return;
+    setDownloadBusy(true);
+    setError('');
+    try {
+      const blob = await projectsApi.download(project.id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const safeName = project.name.trim().replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_').replace(/[. ]+$/g, '') || 'project';
+      link.href = url;
+      link.download = `${safeName}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      setError((e as Error).message || 'Could not download this project.');
+    } finally {
+      setDownloadBusy(false);
     }
   }
   function logout() {
@@ -430,9 +452,11 @@ export function BuilderApp({
             jobs={jobs}
             logs={logs}
             busy={busy}
+            downloadBusy={downloadBusy}
             onGenerate={submitPrompt}
             onAction={projectAction}
             onRefresh={() => refresh().catch((e) => setError(e.message))}
+            onDownload={() => void downloadProject()}
           />
         ) : projectId ? (
           <main className="workspace-loading">{error ? <div><p>Could not load this project.</p><button className="secondary" onClick={() => { setError(''); refresh().catch((e) => setError(e.message)); }}>Try again</button></div> : <><LoaderCircle className="spin" size={20}/> Loading project…</>}</main>
