@@ -5,26 +5,17 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Activity,
-  ArrowDown,
-  ArrowLeft,
   ArrowUpRight,
-  Check,
   ChevronDown,
   CircleHelp,
-  Clock3,
-  Code2,
   FilePlus2,
   Globe2,
   LayoutDashboard,
   LoaderCircle,
   LogOut,
-  Menu,
-  Monitor,
   Plus,
   Search,
-  Smartphone,
   Sparkles,
-  WandSparkles,
   X,
 } from 'lucide-react';
 import {
@@ -36,6 +27,7 @@ import {
   tokenStore,
   User,
 } from '@/lib/api';
+import { ProjectWorkspace } from '@/components/workspace/project-workspace';
 
 export function BuilderApp({
   projectId,
@@ -54,8 +46,6 @@ export function BuilderApp({
   const [query, setQuery] = useState('');
   const [modal, setModal] = useState(false);
   const [name, setName] = useState('');
-  const [prompt, setPrompt] = useState('');
-  const [mobile, setMobile] = useState(false);
   const [logs, setLogs] = useState<{
     buildStdout: string | null;
     buildStderr: string | null;
@@ -153,26 +143,25 @@ export function BuilderApp({
       setProjects((p) => [item, ...p]);
       setModal(false);
       setName('');
-      router.push(`/projects/${item.id}`);
+      router.push(`/project/${item.id}`);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(false);
     }
   }
-  async function submitPrompt(event: React.FormEvent) {
-    event.preventDefault();
-    if (!project || busy || !prompt.trim()) return;
+  async function submitPrompt(text: string) {
+    if (!project || busy || !text.trim()) throw new Error('Enter a request first.');
     setBusy(true);
     setError('');
     try {
-      const result = await projectsApi.generate(project.id, prompt.trim());
-      setPrompt('');
+      const result = await projectsApi.generate(project.id, text.trim());
       const now = new Date().toISOString();
       setJobs((list) => [
         {
           id: result.generationId,
           projectId: project.id,
+          prompt: text.trim(),
           status: 'QUEUED',
           stdout: null,
           stderr: null,
@@ -183,8 +172,10 @@ export function BuilderApp({
         ...list,
       ]);
       setProject(await projectsApi.get(project.id));
+      return result.generationId;
     } catch (e) {
       setError((e as Error).message);
+      throw e;
     } finally {
       setBusy(false);
     }
@@ -193,6 +184,8 @@ export function BuilderApp({
     if (!project) return;
     setBusy(true);
     setError('');
+    if (action === 'build') setProject({ ...project, buildStatus: 'INSTALLING', lastBuildError: null });
+    if (action === 'start' || action === 'restart') setProject({ ...project, runtimeStatus: 'STARTING' });
     try {
       await projectsApi[action](project.id);
       const [item, runtime, projectLogs] = await Promise.all([
@@ -204,6 +197,8 @@ export function BuilderApp({
       setLogs(projectLogs);
     } catch (e) {
       setError((e as Error).message);
+      const current = await projectsApi.get(project.id).catch(() => null);
+      if (current) setProject(current);
     } finally {
       setBusy(false);
     }
@@ -349,7 +344,7 @@ export function BuilderApp({
   );
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${projectId ? 'workspace-app-shell' : ''}`}>
       <aside className="sidebar">
         <Link href="/" className="brand">
           <span className="brand-mark">
@@ -381,7 +376,7 @@ export function BuilderApp({
           {projects.slice(0, 6).map((p) => (
             <Link
               key={p.id}
-              href={`/projects/${p.id}`}
+              href={`/project/${p.id}`}
               className="project-link"
             >
               <span className="project-dot" />
@@ -430,176 +425,17 @@ export function BuilderApp({
           </div>
         )}
         {projectId && project ? (
-          <div className="project-page">
-            <div className="project-head">
-              <div>
-                <Link href="/" className="back-link">
-                  <ArrowLeft size={15} /> All projects
-                </Link>
-                <div className="project-title-row">
-                  <div className="large-project-icon">
-                    <Globe2 size={22} />
-                  </div>
-                  <div>
-                    <h1>{project.name}</h1>
-                    <div className="project-meta">
-                      <Status status={project.status} />
-                      <span>
-                        Created{' '}
-                        {new Date(project.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <button className="secondary" onClick={() => setMobile(!mobile)}>
-                {mobile ? <Smartphone size={16} /> : <Monitor size={16} />}{' '}
-                {mobile ? 'Mobile preview' : 'Desktop preview'}
-              </button>
-            </div>
-            <div className="build-toolbar">
-              <span>Setup <Status status={project.buildStatus} /></span>
-              <span>Runtime <Status status={project.runtimeStatus} /></span>
-              <div className="build-actions">
-                <button className="secondary compact" disabled={busy} onClick={() => projectAction('build')}>Install &amp; run</button>
-                {project.runtimeStatus === 'RUNNING' ? <button className="secondary compact" disabled={busy} onClick={() => projectAction('stop')}>Stop</button> : <button className="secondary compact" disabled={busy || project.buildStatus !== 'SUCCESS'} onClick={() => projectAction('start')}>Start</button>}
-                <button className="secondary compact" disabled={busy || project.buildStatus !== 'SUCCESS'} onClick={() => projectAction('restart')}>Restart</button>
-                {project.previewUrl && <a className="secondary compact" href={project.previewUrl} target="_blank" rel="noopener noreferrer">Open preview <ArrowUpRight size={14}/></a>}
-              </div>
-            </div>
-            <div className="studio-grid">
-              <section className="studio-main">
-                <div className="section-head">
-                  <div>
-                    <span className="eyebrow">LIVE PREVIEW</span>
-                    <h2>Your website, taking shape.</h2>
-                  </div>
-                  <span className="preview-status">
-                    <i /> {project.previewUrl ?? 'PREVIEW NOT RUNNING'}
-                  </span>
-                </div>
-                <div
-                  className={`preview-frame ${mobile ? 'mobile-preview' : ''}`}
-                >
-                  <div className="preview-toolbar">
-                    <span />
-                    <span />
-                    <span />
-                    <div>project preview</div>
-                    <Code2 size={15} />
-                  </div>
-                  {project.runtimeStatus === 'RUNNING' && project.previewUrl ? (
-                    <iframe src={project.previewUrl} title={`${project.name} website preview`} className="website-iframe" sandbox="allow-scripts allow-forms allow-same-origin" />
-                  ) : <div className="preview-unavailable">
-                    <div className="preview-orbit">
-                      <Globe2 size={25} />
-                      <span />
-                    </div>
-                    <h3>{project.buildStatus === 'INSTALLING' ? 'Installing dependencies…' : project.buildStatus === 'BUILDING' ? 'Starting your development server…' : project.buildStatus === 'FAILED' ? 'Preview setup needs attention' : project.runtimeStatus === 'CRASHED' || project.runtimeStatus === 'FAILED' ? 'Preview stopped unexpectedly' : 'Start your development preview'}</h3>
-                    <p>
-                      {project.lastBuildError || 'The generated site will appear here after a successful build and preview startup.'}
-                    </p>
-                    <button type="button" className="primary" disabled={busy || project.buildStatus === 'INSTALLING' || project.buildStatus === 'BUILDING'} onClick={() => projectAction('build')}><Code2 size={15}/> Install &amp; run dev preview</button>
-                  </div>}
-                </div>
-                <form className="prompt-composer" onSubmit={submitPrompt}>
-                  <div className="composer-top">
-                    <span className="composer-icon">
-                      <WandSparkles size={17} />
-                    </span>
-                    <div>
-                      <b>Tell Forma what to build</b>
-                      <small>Describe a change or add a new section.</small>
-                    </div>
-                    <span className="model-pill">
-                      <i /> AI BUILDER
-                    </span>
-                  </div>
-                  <textarea
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Try: Add a warm, editorial About page with a short founder story…"
-                    maxLength={4000}
-                  />
-                  <div className="composer-bottom">
-                    <span>{prompt.length}/4000 characters</span>
-                    <button
-                      className="primary"
-                      disabled={busy || !prompt.trim()}
-                    >
-                      {busy ? (
-                        <LoaderCircle className="spin" size={16} />
-                      ) : (
-                        <Sparkles size={16} />
-                      )}{' '}
-                      Generate
-                    </button>
-                  </div>
-                </form>
-              </section>
-              <aside className="activity-panel">
-                <div className="activity-title">
-                  <div>
-                    <Activity size={17} />
-                    <b>Activity</b>
-                  </div>
-                  <button
-                    className="icon-button"
-                    onClick={() => refresh().catch((e) => setError(e.message))}
-                  >
-                    <ArrowDown size={16} />
-                  </button>
-                </div>
-                {jobs.length === 0 ? (
-                  <div className="activity-empty">
-                    <span className="empty-icon">
-                      <Clock3 size={20} />
-                    </span>
-                    <b>No activity yet</b>
-                    <p>Your generation history will appear here.</p>
-                  </div>
-                ) : (
-                  <div className="job-list">
-                    {jobs.map((job) => (
-                      <div className="job-card" key={job.id}>
-                        <div className="job-card-top">
-                          <Status status={job.status} />
-                          <time>
-                            {new Date(job.createdAt).toLocaleString()}
-                          </time>
-                        </div>
-                        <p>
-                          {job.status === 'COMPLETED'
-                            ? 'Website updated'
-                            : job.status === 'FAILED'
-                              ? 'Generation failed'
-                              : job.status === 'RUNNING'
-                                ? 'Working on your request…'
-                                : 'Waiting in queue'}
-                        </p>
-                        {job.stderr && (
-                          <pre className="job-error">{job.stderr}</pre>
-                        )}
-                        {job.stdout && (
-                          <details>
-                            <summary>View output</summary>
-                            <pre>{job.stdout}</pre>
-                          </details>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {logs && <details className="build-logs"><summary>Build and runtime logs</summary><pre>{[logs.installStdout,logs.installStderr,logs.buildStdout,logs.buildStderr,logs.runtimeStdout,logs.runtimeStderr].filter(Boolean).join('\n')}</pre></details>}
-                <div className="preview-note">
-                  <Sparkles size={15} />
-                  <span>
-                    Generated code is saved in your project workspace.
-                  </span>
-                </div>
-              </aside>
-            </div>
-          </div>
+          <ProjectWorkspace
+            project={project}
+            jobs={jobs}
+            logs={logs}
+            busy={busy}
+            onGenerate={submitPrompt}
+            onAction={projectAction}
+            onRefresh={() => refresh().catch((e) => setError(e.message))}
+          />
+        ) : projectId ? (
+          <main className="workspace-loading">{error ? <div><p>Could not load this project.</p><button className="secondary" onClick={() => { setError(''); refresh().catch((e) => setError(e.message)); }}>Try again</button></div> : <><LoaderCircle className="spin" size={20}/> Loading project…</>}</main>
         ) : (
           <div className="dashboard">
             <div className="welcome-row">
@@ -709,7 +545,7 @@ export function BuilderApp({
               <div className="project-grid">
                 {filtered.map((p, i) => (
                   <Link
-                    href={`/projects/${p.id}`}
+                    href={`/project/${p.id}`}
                     className="project-card"
                     key={p.id}
                   >
@@ -815,10 +651,5 @@ export function BuilderApp({
 
 function Status({ status }: { status: string }) {
   const style = status.toLowerCase();
-  return (
-    <span className={`status status-${style}`}>
-      <i />
-      {status.toLowerCase()}
-    </span>
-  );
+  return <span className={`status status-${style}`}><i />{status.toLowerCase()}</span>;
 }

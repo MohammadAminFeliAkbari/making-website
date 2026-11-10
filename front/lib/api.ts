@@ -1,6 +1,6 @@
 export type User = { id: string; email: string; createdAt: string };
 export type Project = { id: string; name: string; folderName: string; status: 'CREATING'|'READY'|'FAILED'|'GENERATING'; buildStatus: 'PENDING'|'INSTALLING'|'BUILDING'|'SUCCESS'|'FAILED'; runtimeStatus: 'STOPPED'|'STARTING'|'RUNNING'|'CRASHED'|'FAILED'; previewPort: number|null; previewUrl: string|null; buildStartedAt: string|null; buildCompletedAt: string|null; runtimeStartedAt: string|null; lastBuildError: string|null; createdAt: string; updatedAt: string };
-export type Generation = { id: string; projectId: string; status: 'QUEUED'|'RUNNING'|'COMPLETED'|'FAILED'; stdout: string|null; stderr: string|null; exitCode: number|null; createdAt: string; completedAt: string|null };
+export type Generation = { id: string; projectId: string; prompt: string; status: 'QUEUED'|'RUNNING'|'COMPLETED'|'FAILED'; stdout: string|null; stderr: string|null; exitCode: number|null; createdAt: string; completedAt: string|null };
 
 const tokenKey = 'forma.accessToken';
 export const tokenStore = {

@@ -29,26 +29,35 @@ export class ProjectBuildService implements OnModuleDestroy {
     const project = await this.owned(userId, projectId);
     if (this.starting.has(projectId)) throw new ConflictException('A preview operation is already running for this project');
     this.starting.add(projectId);
+    let preservingPreview = project.runtimeStatus === RuntimeStatus.RUNNING && Boolean(project.previewUrl);
     try {
-      await this.stopProcess(project);
+      // Keep the last working preview online while dependencies install. If the
+      // install fails, the user can still use the existing server.
+      if (!preservingPreview) await this.stopProcess(project);
       const workspace = await this.workspace(project);
       const pkg = JSON.parse(await readFile(resolve(workspace, 'package.json'), 'utf8')) as { scripts?: Record<string, string>; packageManager?: string };
       const files = await readdir(workspace);
       const manager = pkg.packageManager?.split('@')[0] ?? (files.includes('package-lock.json') ? 'npm' : files.includes('pnpm-lock.yaml') ? 'pnpm' : files.includes('yarn.lock') ? 'yarn' : 'npm');
       if (manager !== 'npm') throw new ConflictException('Only npm projects are supported for this test preview');
       if (!pkg.scripts?.dev) throw new ConflictException('This project has no package.json dev script');
-      await this.prisma.project.update({ where: { id: projectId }, data: { buildStatus: BuildStatus.INSTALLING, runtimeStatus: RuntimeStatus.STOPPED, previewPort: null, previewUrl: null, runtimeProcessId: null, buildStartedAt: new Date(), buildCompletedAt: null, lastBuildError: null, installStdout: '', installStderr: '', installExitCode: null, buildStdout: '', buildStderr: '', buildExitCode: null } });
+      await this.prisma.project.update({ where: { id: projectId }, data: { buildStatus: BuildStatus.INSTALLING, ...(!preservingPreview ? { runtimeStatus: RuntimeStatus.STOPPED, previewPort: null, previewUrl: null, runtimeProcessId: null } : {}), buildStartedAt: new Date(), buildCompletedAt: null, lastBuildError: null, installStdout: '', installStderr: '', installExitCode: null, buildStdout: '', buildStderr: '', buildExitCode: null } });
       const install = await this.runNpm(workspace, ['install', '--no-audit', '--no-fund'], 300000);
       await this.prisma.project.update({ where: { id: projectId }, data: { installStdout: install.stdout, installStderr: install.stderr, installExitCode: install.exitCode } });
       if (install.exitCode !== 0) {
         const message = `Dependency installation failed (exit ${install.exitCode}): ${install.stderr.slice(-4000)}`;
-        await this.prisma.project.update({ where: { id: projectId }, data: { buildStatus: BuildStatus.FAILED, runtimeStatus: RuntimeStatus.FAILED, buildCompletedAt: new Date(), lastBuildError: message } });
+        const keepPreview = preservingPreview && this.isRuntimeAlive(project);
+        await this.prisma.project.update({ where: { id: projectId }, data: { buildStatus: BuildStatus.FAILED, ...(!keepPreview ? { runtimeStatus: RuntimeStatus.FAILED } : {}), buildCompletedAt: new Date(), lastBuildError: message } });
         return { projectId, buildStatus: BuildStatus.FAILED, error: message };
       }
       await this.prisma.project.update({ where: { id: projectId }, data: { buildStatus: BuildStatus.BUILDING } });
+      if (preservingPreview) {
+        preservingPreview = false;
+        await this.stopProcess(project);
+      }
       return await this.startOwned(userId, project, workspace, pkg.scripts.dev);
     } catch (error) {
-      await this.prisma.project.update({ where: { id: projectId }, data: { buildStatus: BuildStatus.FAILED, runtimeStatus: RuntimeStatus.FAILED, buildCompletedAt: new Date(), lastBuildError: this.message(error) } }).catch(() => undefined);
+      const keepPreview = preservingPreview && this.isRuntimeAlive(project);
+      await this.prisma.project.update({ where: { id: projectId }, data: { buildStatus: BuildStatus.FAILED, ...(!keepPreview ? { runtimeStatus: RuntimeStatus.FAILED } : {}), buildCompletedAt: new Date(), lastBuildError: this.message(error) } }).catch(() => undefined);
       throw error;
     } finally { this.starting.delete(projectId); }
   }
@@ -209,6 +218,12 @@ export class ProjectBuildService implements OnModuleDestroy {
     this.children.delete(project.id);
     if (project.previewPort) this.ports.delete(project.previewPort);
     await this.prisma.project.update({ where: { id: project.id }, data: { runtimeStatus: RuntimeStatus.STOPPED, runtimeProcessId: null, previewPort: null, previewUrl: null } });
+  }
+  private isRuntimeAlive(project: LocalProject) {
+    const child = this.children.get(project.id);
+    if (child) return child.exitCode === null;
+    if (!project.runtimeProcessId) return false;
+    try { process.kill(project.runtimeProcessId, 0); return true; } catch { return false; }
   }
   private async crashed(id: string, message: string) {
     await this.prisma.project.update({ where: { id }, data: { runtimeStatus: RuntimeStatus.CRASHED, runtimeProcessId: null, previewPort: null, previewUrl: null, lastBuildError: message.slice(0, 4000) } }).catch(() => undefined);

@@ -9,7 +9,7 @@ import { createEvent } from '../../../../libs/common/src/contracts/create-event'
 import { PrismaService } from '../../../../libs/database/src/prisma.service';
 
 type RequestPayload = { generationId: string; projectId: string; userId: string; prompt: string; folderName: string };
-const selection = { id: true, projectId: true, userId: true, status: true, stdout: true, stderr: true, exitCode: true, startedAt: true, completedAt: true, createdAt: true, updatedAt: true } as const;
+const selection = { id: true, projectId: true, userId: true, prompt: true, status: true, stdout: true, stderr: true, exitCode: true, startedAt: true, completedAt: true, createdAt: true, updatedAt: true } as const;
 
 @Injectable()
 export class GenerationService implements OnModuleDestroy {
