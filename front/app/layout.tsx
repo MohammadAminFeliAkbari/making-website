@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import './preview.css';
 import './workspace.css';
+import './home.css';
 
 export const metadata: Metadata = { title: 'Forma — AI Website Builder', description: 'Design and generate your next website with AI.' };
 

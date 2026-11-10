@@ -127,7 +127,7 @@ export function ProjectWorkspace({
   return (
     <main className="workspace-shell" style={{ '--chat-width': `${leftPercent}%` } as React.CSSProperties}>
       <header className="workspace-header">
-        <Link href="/" className="workspace-back" aria-label="All projects"><ArrowLeft size={17}/></Link>
+        <Link href="/dashboard" className="workspace-back" aria-label="All projects"><ArrowLeft size={17}/></Link>
         <div className="workspace-project-icon"><Globe2 size={18}/></div>
         <div className="workspace-project-name"><strong>{project.name}</strong><span>Website workspace</span></div>
         <div className="workspace-project-status"><span>Project <Status status={project.status}/></span><span>Generation <Status status={generationStatus(jobs)}/></span><span>Build <Status status={project.buildStatus}/></span><span>Runtime <Status status={project.runtimeStatus}/></span></div>

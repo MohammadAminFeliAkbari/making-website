@@ -1,2 +1,2 @@
-import { BuilderApp } from '@/components/builder-app';
-export default function Home() { return <BuilderApp />; }
+import { HomePage } from '@/components/home-page';
+export default function Home() { return <HomePage />; }

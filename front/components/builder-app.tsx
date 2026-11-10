@@ -128,7 +128,8 @@ export function BuilderApp({
               String(data.get('password')),
             );
       tokenStore.set(result.accessToken);
-      router.replace('/');
+      const next = new URLSearchParams(window.location.search).get('next');
+      router.replace(next?.startsWith('/') && !next.startsWith('//') ? next : '/dashboard');
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -383,7 +384,7 @@ export function BuilderApp({
           <ChevronDown size={15} />
         </div>
         <div className="side-label">WORKSPACE</div>
-        <Link href="/" className="nav-item active">
+        <Link href="/dashboard" className="nav-item active">
           <LayoutDashboard size={17} />
           Overview
         </Link>
